@@ -1,16 +1,16 @@
 
 from rest_framework import permissions
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.utils.datetime_safe import datetime
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from shared.utilit import send_email
 from .models import User, DONE, CODE_VERIFIED, NEW, VIA_EMAIL, VIA_PHONE
-from .serializers import SignUpSerializer
-
+from .serializers import SignUpSerializer, ChangeUserIndormation, ChangeUserPhotoSerializers,LoginSerializers
 
 
 class CreateUser(CreateAPIView):
@@ -57,6 +57,7 @@ class VerifyAPIView(APIView):
 
 
 class GetNewVerification(APIView):
+    permission_classes = (IsAuthenticated,)
     def get(self,request,*args,**kwargs):
         user = self.request.user
         self.check_verification(user)
@@ -88,3 +89,69 @@ class GetNewVerification(APIView):
                 'messege':"Kodingiz hali yaroqli biroz kutib turing"
             }
             raise ValidationError(data)
+
+
+
+class ChangeUserIndormationView(UpdateAPIView):
+    permission_classes = [IsAuthenticated,]
+    serializer_class = ChangeUserIndormation,
+    http_method_names = ['patch','put']
+
+    def get_object(self):
+        return self.request.user
+    def update(self, request, *args, **kwargs):
+        super(ChangeUserIndormationView,self).update(request,*args,**kwargs)
+        data = {
+            'success':True,
+            'message':'User Update successfully',
+            'auth_status': self.request.user.auth_status,
+        }
+
+
+        return Response(data,status=200)
+
+
+    def partial_update(self, request, *args, **kwargs):
+        super(ChangeUserIndormationView,self).partial_update(request,*args,**kwargs)
+        data = {
+            "success":True,
+            "message":"Partial Update SuccessFully",
+            "auth_status": self.request.user.auth_status,
+        }
+
+        return Response(data,status=200)
+
+class ChangeUserPhotoView(APIView):
+
+    permission_classes = (IsAuthenticated,)
+
+
+    def put(self,request,*args,**kwargs):
+        serialers = ChangeUserPhotoSerializers(data=request.data)
+        if serialers.is_valid():
+            user = request.user
+            serialers.update(user,serialers.validated_data)
+            return Response(
+                {
+                    "message":"Rasm o'zgartirildi "
+
+                },status=200
+
+            )
+        return Response(
+            serialers.errors,status=400
+        )
+
+
+class LoginView(TokenObtainPairView):
+    serializer_class = LoginSerializers
+
+
+
+
+
+
+
+
+
+
